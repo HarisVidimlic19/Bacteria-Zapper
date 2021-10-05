@@ -1,5 +1,6 @@
 const points = [];
 const bacteriaArr = [];
+var particles = [];
 let score = 0;
 const r = 0.8;	//radius disc
 let num = 0;	//number of alive bacteria
@@ -7,7 +8,9 @@ let sumTime = 0;
 let lastTime = 0;
 let sumTime2 = 0;
 let bacteriaWin = 0;
+let end = false;
 const circle = 37;	//number of circumference points (disc)
+
 class Point{
 	constructor(degree){
 		this.y = r * Math.sin(toRadians(degree));
@@ -18,6 +21,36 @@ class Point{
 		this.B = 0.0;
 	}
 }
+
+class Particle {
+
+	constructor(x, y, r, color) {
+		this.x = x;
+		this.y = y;
+		this.r = r + Math.random() * 5;
+		this.color = "rgba(" + Math.round((1*color[0]) * 255) + "," + Math.round((1*color[1]) * 255) + "," + Math.round((1*color[2]) * 255) + "," + Math.random()*0.85 + ")";
+		this.speed = {
+			x: -1 + Math.random() * 3,
+			y: -1 + Math.random() * 3
+		}
+		this.t = 30 + Math.random() * 10;
+	}
+
+	draw(ptl) {
+		if(this.t > 0 && this.r > 0) {
+			ptl.beginPath();
+			ptl.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+			ptl.fillStyle = this.color;
+			ptl.fill();
+
+			this.t--;
+			this.r -= 0.25;
+			this.x += this.speed.x;
+			this.y += this.speed.y;
+		}
+	}
+}
+
 
 class Bacteria {
     constructor(degree){  //circumference length
@@ -170,6 +203,7 @@ const checkStatus = () => {
 			bacteriaArr[i].bool = true;
 		}
 		if(bacteriaWin >= 2 || score > 900){
+			end = true;
 			alert('You lost! Bacteria took over!');
 			location.reload();
 			break;
@@ -184,18 +218,39 @@ const playerWin = () => {
 	}
 }
 
-const explode = (bacteria) => {
-	const effect = new Bacteria(bacteria.degree);
-	effect.r = bacteria.r + bacteria.r/2;
-	effect.updateVar();
-	for(const j of effect.arr){
-		triangleVertices.push(j.x);
-		triangleVertices.push(j.y);
-		triangleVertices.push(j.R);
-		triangleVertices.push(j.G);
-		triangleVertices.push(j.B);
+function explosion(bacteria){
+
+	let X = (bacteria.x + 77/75) * 300;
+	let Y = -1 * (bacteria.y-1) * 300 - 8;
+	let R = (((bacteria.x + bacteria.r) + 77/75) * 300) - X;
+	let num = 0;
+
+	// Loops through the bacteria's x and y and turns into particles
+	for(let x = 0; x < R; x++){
+		for(let y = 0; y < R; y++){
+			
+			if(num % 90 == 0) {
+				let Px = X + x;
+				let Py = Y + y;
+				let NPx = X - x;
+				let NPy = Y - y;
+				
+				color = [bacteria.R, bacteria.G, bacteria.B];
+				// Create a corresponding particle for each "quandrant" of the bacteria
+				let particle = new Particle(Px, Py, 5, color);
+				particles.push(particle);
+				particle = new Particle(NPx, NPy, 5, color);
+				particles.push(particle);
+				particle = new Particle(Px, NPy, 5, color);
+				particles.push(particle);
+				particle = new Particle(NPx, Py, 5, color);
+				particles.push(particle);
+			}
+			num++;
+		}
 	}
 }
+
 
 spawnBacteria();
 
@@ -236,6 +291,9 @@ var InitDemo = function() {
 
 	var canvas = document.getElementById('game-surface');
 	var gl = canvas.getContext('webgl');
+	
+	var particlesCanvas = document.getElementById('particles');
+	var ptl = particlesCanvas.getContext('2d');
 
 	if (!gl){
 		console.log('webgl not supported, falling back on experimental-webgl');
@@ -286,9 +344,6 @@ var InitDemo = function() {
 	//////////////////////////////////
 
 	//all arrays in JS is Float64 by default
-	
-	
-	
 
 	var triangleVertexBufferObject = gl.createBuffer();
 	//set the active buffer to the triangle buffer
@@ -331,6 +386,7 @@ var InitDemo = function() {
 		let y = my;
 		for(let i = 0; i < bacteriaArr.length; i++){
 			if(isInside(x, y, bacteriaArr[i])){
+				explosion(bacteriaArr[i]);
 				deleteBacteria(bacteriaArr[i], true);
 				break;
 			}
@@ -364,6 +420,10 @@ var InitDemo = function() {
 			sumTime = 0;
 			checkStatus();
 		}
+		ptl.clearRect(0, 0, canvas.width, canvas.height);
+		for(i in particles) {
+			particles[i].draw(ptl);
+		}
 		if(sumTime2 > 2300){
 			spawnBacteria()
 			sumTime2 = 0;
@@ -371,9 +431,11 @@ var InitDemo = function() {
 		if(num > 1){
 			collide();
 		}
+
 		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(triangleVertices),gl.STATIC_DRAW);
 		requestAnimationFrame(loop);
-	}		
+	}
+	if (end == false)		
 	loop();
 
 	
