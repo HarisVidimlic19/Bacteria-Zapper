@@ -236,6 +236,7 @@ var InitDemo = function() {
 
 	var canvas = document.getElementById('game-surface');
 	var gl = canvas.getContext('webgl');
+	
 
 	if (!gl){
 		console.log('webgl not supported, falling back on experimental-webgl');
