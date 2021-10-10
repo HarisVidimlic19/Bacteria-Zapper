@@ -292,8 +292,11 @@ var InitDemo = function() {
 	var canvas = document.getElementById('game-surface');
 	var gl = canvas.getContext('webgl');
 	
+<<<<<<< HEAD
 	var particlesCanvas = document.getElementById('particles');
 	var ptl = particlesCanvas.getContext('2d');
+=======
+>>>>>>> fc097415451531fc66babda851281f405ef1d5c3
 
 	if (!gl){
 		console.log('webgl not supported, falling back on experimental-webgl');

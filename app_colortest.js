@@ -1,56 +1,27 @@
 const points = [];
 const bacteriaArr = [];
-var particles = [];
+const explosion = [];
+var vertices = [];
 let score = 0;
 const r = 0.8;	//radius disc
 let num = 0;	//number of alive bacteria
 let sumTime = 0;	
 let lastTime = 0;
 let sumTime2 = 0;
+let sumTime3 = 0;
 let bacteriaWin = 0;
-let end = false;
+let numVer = 0;
 const circle = 37;	//number of circumference points (disc)
-
 class Point{
 	constructor(degree){
 		this.y = r * Math.sin(toRadians(degree));
 		this.x = r * Math.cos(toRadians(degree));
 		this.degree = degree;
-		this.R = 1.0;
-		this.G = 0.0;
-		this.B = 0.0;
+		this.R = 0.1;
+		this.G = 0.74;
+		this.B = 1.0;
 	}
 }
-
-class Particle {
-
-	constructor(x, y, r, color) {
-		this.x = x;
-		this.y = y;
-		this.r = r + Math.random() * 5;
-		this.color = "rgba(" + Math.round((1*color[0]) * 255) + "," + Math.round((1*color[1]) * 255) + "," + Math.round((1*color[2]) * 255) + "," + Math.random()*0.85 + ")";
-		this.speed = {
-			x: -1 + Math.random() * 3,
-			y: -1 + Math.random() * 3
-		}
-		this.t = 30 + Math.random() * 10;
-	}
-
-	draw(ptl) {
-		if(this.t > 0 && this.r > 0) {
-			ptl.beginPath();
-			ptl.arc(this.x, this.y, this.r, 0, Math.PI * 2);
-			ptl.fillStyle = this.color;
-			ptl.fill();
-
-			this.t--;
-			this.r -= 0.25;
-			this.x += this.speed.x;
-			this.y += this.speed.y;
-		}
-	}
-}
-
 
 class Bacteria {
     constructor(degree){  //circumference length
@@ -62,6 +33,7 @@ class Bacteria {
 		this.G = Math.random();
 		this.B = Math.random();
 		this.bool = false;
+		this.num = 0;
 		this.arr = [];	//all 9 points on the circumference of the bacteria
 		this.arr.push({x: this.x, y: this.y, R: this.R, G: this.G, B: this.B});
 		for(let i = 0; i < 9; i++){
@@ -90,7 +62,7 @@ class Bacteria {
 
 var triangleVertices = [
 	//X,   Y,     R, G, B
-	0.0,  0.0,    1, 0, 0,
+	0.0,  0.0,    0.1, 0.74, 1,
 	//-0.5,-0.5,    0, 1, 0,
 	//0.5, -0.5,    0, 0, 1,
 ];
@@ -119,7 +91,7 @@ const isInside = (x, y, bacteria) => {
 }
 
 const spawnBacteria = () => {
-    let temp = 3 + Math.ceil(Math.random() * 7);
+    let temp = 3 + Math.ceil(Math.random() * 2);
     for(let i = num; i < num + temp; i++){
         bacteriaArr[i] = new Bacteria(Math.floor(Math.random() * 360));
 		for(const j of bacteriaArr[i].arr){	
@@ -135,8 +107,8 @@ const spawnBacteria = () => {
 
 const deleteBacteria = (bacteria, bool) => {
 	let index = bacteriaArr.indexOf(bacteria);
-	if (bool){
-		//explode(bacteriaArr[index]);
+	if(bool){
+		explode(bacteriaArr[index]);
 	}
     bacteriaArr.splice(index, 1);
 	triangleVertices.splice((circle + 1)*5 + index*50, 50);
@@ -167,9 +139,11 @@ const collide = (bacteria) => {
 const merge = (bacteria1, bacteria2) => {
 	let midX = (bacteria1.x + bacteria2.x)/2;
 	let midY = (bacteria1.y + bacteria2.y)/2;
+	let midDegree = (bacteria1.degree + bacteria2.degree)/2;
 	let midR = Math.sqrt((Math.pow((bacteria1.r + bacteria2.r), 2)))
 	bacteriaArr.push(new Bacteria(Math.floor(Math.random() * 360)));
 	num++;
+	bacteriaArr[num-1].degree = midDegree;
 	bacteriaArr[num-1].x = midX;
 	bacteriaArr[num-1].y = midY;
 	bacteriaArr[num-1].r = midR;
@@ -202,10 +176,20 @@ const checkStatus = () => {
 			console.log('Bacteria has reached threshold!');
 			bacteriaArr[i].bool = true;
 		}
-		if(bacteriaWin >= 2 || score > 900){
-			end = true;
-			alert('You lost! Bacteria took over!');
+		if(bacteriaWin >= 2){
+			alert('You lost! Bacteria took over!\n2 Bacteria reached threshold!');
 			location.reload();
+			setTimeout(function(){
+				window.stop();
+			}, 3000)
+			break;
+		}
+		if(score > 1000){
+			alert("You lost! Bacteria took over!\nBacteria's score reached 1000!");
+			location.reload();
+			setTimeout(function(){
+				window.stop();
+			}, 3000)
 			break;
 		}
 	}
@@ -218,39 +202,33 @@ const playerWin = () => {
 	}
 }
 
-function explosion(bacteria){
-
-	let X = (bacteria.x + 77/75) * 300;
-	let Y = -1 * (bacteria.y-1) * 300 - 8;
-	let R = (((bacteria.x + bacteria.r) + 77/75) * 300) - X;
-	let num = 0;
-
-	// Loops through the bacteria's x and y and turns into particles
-	for(let x = 0; x < R; x++){
-		for(let y = 0; y < R; y++){
-			
-			if(num % 90 == 0) {
-				let Px = X + x;
-				let Py = Y + y;
-				let NPx = X - x;
-				let NPy = Y - y;
-				
-				color = [bacteria.R, bacteria.G, bacteria.B];
-				// Create a corresponding particle for each "quandrant" of the bacteria
-				let particle = new Particle(Px, Py, 5, color);
-				particles.push(particle);
-				particle = new Particle(NPx, NPy, 5, color);
-				particles.push(particle);
-				particle = new Particle(Px, NPy, 5, color);
-				particles.push(particle);
-				particle = new Particle(NPx, Py, 5, color);
-				particles.push(particle);
-			}
-			num++;
-		}
+const explode = (bacteria) => {
+	const effect = new Bacteria(bacteria.degree);
+	effect.r = bacteria.r*2;
+	effect.R = bacteria.R;
+	effect.G = bacteria.G;
+	effect.B = bacteria.B;
+	effect.updateVar();
+	const effect1 = new Bacteria(bacteria.degree);
+	effect1.r = bacteria.r*3;
+	effect1.R = bacteria.R;
+	effect1.G = bacteria.G;
+	effect1.B = bacteria.B;
+	effect1.updateVar();
+	for(let i = 1; i < effect.arr.length; i++){
+		vertices.push(effect.arr[i].x);
+		vertices.push(effect.arr[i].y);
+		vertices.push(effect.arr[i].R);
+		vertices.push(effect.arr[i].G);
+		vertices.push(effect.arr[i].B);
+		vertices.push(effect1.arr[i].x);
+		vertices.push(effect1.arr[i].y);
+		vertices.push(effect1.arr[i].R);
+		vertices.push(effect1.arr[i].G);
+		vertices.push(effect1.arr[i].B);
 	}
+	numVer++;
 }
-
 
 spawnBacteria();
 
@@ -291,9 +269,6 @@ var InitDemo = function() {
 
 	var canvas = document.getElementById('game-surface');
 	var gl = canvas.getContext('webgl');
-	
-	var particlesCanvas = document.getElementById('particles');
-	var ptl = particlesCanvas.getContext('2d');
 
 	if (!gl){
 		console.log('webgl not supported, falling back on experimental-webgl');
@@ -312,6 +287,8 @@ var InitDemo = function() {
 	//////////////////////////////////
 	// create/compile/link shaders  //
 	//////////////////////////////////
+
+
 	var vertexShader = gl.createShader(gl.VERTEX_SHADER);
 	var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
 
@@ -338,43 +315,81 @@ var InitDemo = function() {
 		console.error('Error linking program!', gl.getProgramInfo(program));
 		return;
 	}
-
+	
 	//////////////////////////////////
 	//    create triangle buffer    //
 	//////////////////////////////////
 
 	//all arrays in JS is Float64 by default
+	
+	
+	function reset(){
 
-	var triangleVertexBufferObject = gl.createBuffer();
-	//set the active buffer to the triangle buffer
-	gl.bindBuffer(gl.ARRAY_BUFFER, triangleVertexBufferObject);
-	//gl expecting Float32 Array not Float64
-	//gl.STATIC_DRAW means we send the data only once (the triangle vertex position
-	//will not change over time)
-	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(triangleVertices),gl.STATIC_DRAW);
+		var triangleVertexBufferObject = gl.createBuffer();
+		//set the active buffer to the triangle buffer
+		gl.bindBuffer(gl.ARRAY_BUFFER, triangleVertexBufferObject);
+		//gl expecting Float32 Array not Float64
+		//gl.STATIC_DRAW means we send the data only once (the triangle vertex position
+		//will not change over time)
+		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(triangleVertices),gl.STATIC_DRAW);
 
-	var positionAttribLocation = gl.getAttribLocation(program,'vertPosition');
-	var colorAttribLocation = gl.getAttribLocation(program,'vertColor');
-	gl.vertexAttribPointer(
-		positionAttribLocation, //attribute location
-		2, //number of elements per attribute
-		gl.FLOAT, 
-		gl.FALSE,
-		5*Float32Array.BYTES_PER_ELEMENT,//size of an individual vertex
-		0*Float32Array.BYTES_PER_ELEMENT//offset from the beginning of a single vertex to this attribute
-		);
-	gl.vertexAttribPointer(
-		colorAttribLocation, //attribute location
-		3, //number of elements per attribute
-		gl.FLOAT, 
-		gl.FALSE,
-		5*Float32Array.BYTES_PER_ELEMENT,//size of an individual vertex
-		2*Float32Array.BYTES_PER_ELEMENT//offset from the beginning of a single vertex to this attribute
-		);
-	gl.enableVertexAttribArray(positionAttribLocation);
-	gl.enableVertexAttribArray(colorAttribLocation);
+		var positionAttribLocation = gl.getAttribLocation(program,'vertPosition');
+		var colorAttribLocation = gl.getAttribLocation(program,'vertColor');
+		gl.vertexAttribPointer(
+			positionAttribLocation, //attribute location
+			2, //number of elements per attribute
+			gl.FLOAT, 
+			gl.FALSE,
+			5*Float32Array.BYTES_PER_ELEMENT,//size of an individual vertex
+			0*Float32Array.BYTES_PER_ELEMENT//offset from the beginning of a single vertex to this attribute
+			);
+		gl.vertexAttribPointer(
+			colorAttribLocation, //attribute location
+			3, //number of elements per attribute
+			gl.FLOAT, 
+			gl.FALSE,
+			5*Float32Array.BYTES_PER_ELEMENT,//size of an individual vertex
+			2*Float32Array.BYTES_PER_ELEMENT//offset from the beginning of a single vertex to this attribute
+			);
+		gl.enableVertexAttribArray(positionAttribLocation);
+		gl.enableVertexAttribArray(colorAttribLocation);
 
-	gl.useProgram(program);
+		gl.useProgram(program);
+	}
+
+	function reset1(){
+
+		var triangleVertexBufferObject = gl.createBuffer();
+		//set the active buffer to the triangle buffer
+		gl.bindBuffer(gl.ARRAY_BUFFER, triangleVertexBufferObject);
+		//gl expecting Float32 Array not Float64
+		//gl.STATIC_DRAW means we send the data only once (the triangle vertex position
+		//will not change over time)
+		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices),gl.STATIC_DRAW);
+		
+		var positionAttribLocation = gl.getAttribLocation(program,'vertPosition');
+		var colorAttribLocation = gl.getAttribLocation(program,'vertColor');
+		gl.vertexAttribPointer(
+			positionAttribLocation, //attribute location
+			2, //number of elements per attribute
+			gl.FLOAT, 
+			gl.FALSE,
+			5*Float32Array.BYTES_PER_ELEMENT,//size of an individual vertex
+			0*Float32Array.BYTES_PER_ELEMENT//offset from the beginning of a single vertex to this attribute
+			);
+		gl.vertexAttribPointer(
+			colorAttribLocation, //attribute location
+			3, //number of elements per attribute
+			gl.FLOAT, 
+			gl.FALSE,
+			5*Float32Array.BYTES_PER_ELEMENT,//size of an individual vertex
+			2*Float32Array.BYTES_PER_ELEMENT//offset from the beginning of a single vertex to this attribute
+			);
+		gl.enableVertexAttribArray(positionAttribLocation);
+		gl.enableVertexAttribArray(colorAttribLocation);
+
+		gl.useProgram(program);
+	}
 
 	canvas.onmousedown = function(ev) {
 		var mx = ev.clientX, my = ev.clientY;
@@ -386,7 +401,6 @@ var InitDemo = function() {
 		let y = my;
 		for(let i = 0; i < bacteriaArr.length; i++){
 			if(isInside(x, y, bacteriaArr[i])){
-				explosion(bacteriaArr[i]);
 				deleteBacteria(bacteriaArr[i], true);
 				break;
 			}
@@ -399,45 +413,49 @@ var InitDemo = function() {
 	var loop = function(time = 0){
 		sumTime += time - lastTime;
 		sumTime2 += time - lastTime;
+		sumTime3 += time - lastTime;
     	lastTime = time;
-		gl.clearColor(0.5,0.8,0.8,1.0);
-		gl.clear(gl.COLOR_BUFFER_BIT);	
-		gl.drawArrays(gl.TRIANGLE_FAN,0,38);
-		for(let i = 0; i < num; i++){
-			gl.drawArrays(gl.TRIANGLE_FAN,38 + i * 10, 10);
-		}
-		if(sumTime > 500){
+		if(sumTime3 > 200){
+			reset()
+			gl.clearColor(0.5,0.8,0.8,1.0);
+			gl.clear(gl.COLOR_BUFFER_BIT);	
+			gl.drawArrays(gl.TRIANGLE_FAN,0,38);
 			for(let i = 0; i < num; i++){
-				bacteriaArr[i].r += 0.01;
-				bacteriaArr[i].updateVar();
-				score += Math.round(50 * bacteriaArr[i].r);
-				for(let j = 0; j < bacteriaArr[i].arr.length; j++){
-					triangleVertices[circle*5 + (i*50) + (j*5) + 5] = bacteriaArr[i].arr[j].x;
-					triangleVertices[circle*5 + (i*50) + (j*5 + 1) + 5] = bacteriaArr[i].arr[j].y;
+				gl.drawArrays(gl.TRIANGLE_FAN,38 + i * 10, 10);
+			}
+			if(sumTime > 600){
+				for(let i = 0; i < num; i++){
+					bacteriaArr[i].r += 0.01;
+					bacteriaArr[i].updateVar();
+					score += Math.round(50 * bacteriaArr[i].r);
+					for(let j = 0; j < bacteriaArr[i].arr.length; j++){
+						triangleVertices[circle*5 + (i*50) + (j*5) + 5] = bacteriaArr[i].arr[j].x;
+						triangleVertices[circle*5 + (i*50) + (j*5 + 1) + 5] = bacteriaArr[i].arr[j].y;
+					}
+				}
+				console.log(`Current score: ${score}`);
+				sumTime = 0;
+				checkStatus();
+			}
+			if(sumTime2 > 3000){
+				spawnBacteria()
+				sumTime2 = 0;
+			}
+			if(num > 1){
+				collide();
+			}
+			if(vertices.length > 0){
+				reset1();
+				for(let i = 0; i < numVer; i++){
+					gl.drawArrays(gl.LINES, 0, 18)
+					vertices.splice(0, 90)
 				}
 			}
-			console.log(`Current score: ${score}`);
-			sumTime = 0;
-			checkStatus();
+			sumTime3 = 0;
 		}
-		ptl.clearRect(0, 0, canvas.width, canvas.height);
-		for(const i in particles) {
-			i.draw(ptl);
-		}
-		if(sumTime2 > 2300){
-			spawnBacteria()
-			sumTime2 = 0;
-		}
-		if(num > 1){
-			collide();
-		}
-
-		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(triangleVertices),gl.STATIC_DRAW);
+		
 		requestAnimationFrame(loop);
-	}
-	if (end == false)		
+	}		
 	loop();
 
-	
 };
-
